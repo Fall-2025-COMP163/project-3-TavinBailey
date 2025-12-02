@@ -2,13 +2,13 @@
 COMP 163 - Project 3: Quest Chronicles
 Combat System Module - Starter Code
 
-Name: [Your Name Here]
+Name: Tavin Bailey
 
-AI Usage: [Document any AI assistance used]
+AI Usage: AI used to check all errors.
 
 Handles combat mechanics
 """
-
+import random
 from custom_exceptions import (
     InvalidTargetError,
     CombatNotActiveError,
@@ -34,7 +34,40 @@ def create_enemy(enemy_type):
     """
     # TODO: Implement enemy creation
     # Return dictionary with: name, health, max_health, strength, magic, xp_reward, gold_reward
-    pass
+    enemy_type = enemy_type.lower()
+    enemies = {
+        "goblin": {
+            "name": "Goblin",
+            "health": 50,
+            "max_health": 50,
+            "strength": 8,
+            "magic": 2,
+            "xp_reward": 25,
+            "gold_reward": 10
+        },
+        "orc": {
+            "name": "Orc",
+            "health": 80,
+            "max_health": 80,
+            "strength": 12,
+            "magic": 5,
+            "xp_reward": 50,
+            "gold_reward": 25
+        },
+        "dragon": {
+            "name": "Dragon",
+            "health": 200,
+            "max_health": 200,
+            "strength": 25,
+            "magic": 15,
+            "xp_reward": 200,
+            "gold_reward": 100
+        }
+    }
+    if enemy_type not in enemies: # Check if enemy_type is valid, raise error if unknown
+        raise InvalidTargetError(f"Enemy type '{enemy_type}' is unknown")
+
+    return enemies[enemy_type].copy()
 
 def get_random_enemy_for_level(character_level):
     """
@@ -49,7 +82,13 @@ def get_random_enemy_for_level(character_level):
     # TODO: Implement level-appropriate enemy selection
     # Use if/elif/else to select enemy type
     # Call create_enemy with appropriate type
-    pass
+    # Select enemy based on character level
+    if character_level <= 2:
+        return create_enemy("goblin")
+    elif character_level <= 5:
+        return create_enemy("orc")
+    else:
+        return create_enemy("dragon")
 
 # ============================================================================
 # COMBAT SYSTEM
@@ -68,7 +107,10 @@ class SimpleBattle:
         # Store character and enemy
         # Set combat_active flag
         # Initialize turn counter
-        pass
+        self.character = character # store character dict
+        self.enemy = enemy         # store enemy dict
+        self.combat_active = True  # flag for active battle
+        self.turn_counter = 1      # track turns
     
     def start_battle(self):
         """
@@ -83,7 +125,41 @@ class SimpleBattle:
         # Check character isn't dead
         # Loop until someone dies
         # Award XP and gold if player wins
-        pass
+        if self.character["health"] <= 0: # Check character alive before starting battle
+            raise CharacterDeadError("Cannot start battle: character is dead!")
+
+        display_battle_log("Battle begins!")
+
+        while self.combat_active:
+            display_combat_stats(self.character, self.enemy)
+
+            self.player_turn()
+            result = self.check_battle_end()
+            if result:
+                break
+
+            self.enemy_turn()
+            result = self.check_battle_end()
+            if result:
+                break
+
+            self.turn_counter += 1
+
+        if result == "player":
+            rewards = get_victory_rewards(self.enemy)
+            display_battle_log("You have won the battle!")
+            return {
+                "winner": "player",
+                "xp_gained": rewards["xp"],
+                "gold_gained": rewards["gold"]
+            }
+
+        display_battle_log("You were defeated...")
+        return {
+            "winner": "enemy",
+            "xp_gained": 0,
+            "gold_gained": 0
+        }
     
     def player_turn(self):
         """
@@ -101,7 +177,38 @@ class SimpleBattle:
         # Display options
         # Get player choice
         # Execute chosen action
-        pass
+        if not self.combat_active: # Player turn checks
+            raise CombatNotActiveError("No battles are currently active.")
+
+        print("\n--- PLAYER TURN ---")
+        print("1. Basic Attack")
+        print("2. Special Ability")
+        print("3. Run")
+
+        choice = input("Choose action: ").strip()
+
+        if choice == "1":
+            dmg = self.calculate_damage(self.character, self.enemy)
+            self.apply_damage(self.enemy, dmg)
+            display_battle_log(f"You strike the enemy for {dmg} damage!")
+        
+        elif choice == "2":
+            try:
+                message = use_special_ability(self.character, self.enemy)
+                display_battle_log(message)
+            except AbilityOnCooldownError:
+                display_battle_log("You cannot use that ability yet. Ability is on cooldown!")
+
+        elif choice == "3":
+            escaped = self.attempt_escape()
+            if escaped:
+                display_battle_log("You escaped successfully!")
+                return
+            else:
+                display_battle_log("Escape failed!")
+
+        else:
+            display_battle_log("Invalid choice. You lose your turn!")
     
     def enemy_turn(self):
         """
@@ -115,7 +222,13 @@ class SimpleBattle:
         # Check combat is active
         # Calculate damage
         # Apply to character
-        pass
+        if not self.combat_active:
+            raise CombatNotActiveError("No battles are currently active.")
+
+        print("\n--- ENEMY TURN ---")
+        dmg = self.calculate_damage(self.enemy, self.character)
+        self.apply_damage(self.character, dmg)
+        display_battle_log(f"{self.enemy['name']} attacks for {dmg} damage!")
     
     def calculate_damage(self, attacker, defender):
         """
@@ -127,7 +240,9 @@ class SimpleBattle:
         Returns: Integer damage amount
         """
         # TODO: Implement damage calculation
-        pass
+        # Damage calculation: strength minus quarter of defender strength, min 1
+        dmg = attacker["strength"] - (defender["strength"] // 4)
+        return max(1, dmg)
     
     def apply_damage(self, target, damage):
         """
@@ -136,7 +251,9 @@ class SimpleBattle:
         Reduces health, prevents negative health
         """
         # TODO: Implement damage application
-        pass
+        target["health"] -= damage # Apply damage, prevent negative health
+        if target["health"] < 0:
+            target["health"] = 0
     
     def check_battle_end(self):
         """
@@ -145,7 +262,13 @@ class SimpleBattle:
         Returns: 'player' if enemy dead, 'enemy' if character dead, None if ongoing
         """
         # TODO: Implement battle end check
-        pass
+        if self.enemy["health"] <= 0:
+            self.combat_active = False
+            return "player"
+        if self.character["health"] <= 0:
+            self.combat_active = False
+            return "enemy"
+        return None
     
     def attempt_escape(self):
         """
@@ -158,7 +281,10 @@ class SimpleBattle:
         # TODO: Implement escape attempt
         # Use random number or simple calculation
         # If successful, set combat_active to False
-        pass
+        success = random.random() < 0.5 # Escape attempt: 50% chance
+        if success:
+            self.combat_active = False
+        return success
 
 # ============================================================================
 # SPECIAL ABILITIES
@@ -181,31 +307,56 @@ def use_special_ability(character, enemy):
     # Check character class
     # Execute appropriate ability
     # Track cooldowns (optional advanced feature)
-    pass
+    char_class = character["class"].lower()
+
+    if char_class == "warrior":
+        return warrior_power_strike(character, enemy)
+
+    elif char_class == "mage":
+        return mage_fireball(character, enemy)
+
+    elif char_class == "rogue":
+        return rogue_critical_strike(character, enemy)
+
+    elif char_class == "cleric":
+        return cleric_heal(character)
+
+    else:
+        return "No special ability available."
 
 def warrior_power_strike(character, enemy):
     """Warrior special ability"""
     # TODO: Implement power strike
     # Double strength damage
-    pass
+    dmg = character["strength"] * 2
+    enemy["health"] -= dmg
+    return f"Power Strike! You deal {dmg} damage."
 
 def mage_fireball(character, enemy):
     """Mage special ability"""
     # TODO: Implement fireball
     # Double magic damage
-    pass
+    dmg = character["magic"] * 2
+    enemy["health"] -= dmg
+    return f"Fireball hits for {dmg} damage!"
 
 def rogue_critical_strike(character, enemy):
     """Rogue special ability"""
     # TODO: Implement critical strike
     # 50% chance for triple damage
-    pass
+    if random.random() < 0.5:
+        dmg = character["strength"] * 3
+        enemy["health"] -= dmg
+        return f"Critical Strike! Massive {dmg} damage!"
+    else:
+        return "Critical Strike missed!"
 
 def cleric_heal(character):
     """Cleric special ability"""
     # TODO: Implement healing
     # Restore 30 HP (not exceeding max_health)
-    pass
+    character["health"] = min(character["health"] + 30, character["max_health"])
+    return "You heal 30 HP."
 
 # ============================================================================
 # COMBAT UTILITIES
@@ -218,7 +369,7 @@ def can_character_fight(character):
     Returns: True if health > 0 and not in battle
     """
     # TODO: Implement fight check
-    pass
+    return character["health"] > 0 # Check if character can fight
 
 def get_victory_rewards(enemy):
     """
@@ -227,7 +378,7 @@ def get_victory_rewards(enemy):
     Returns: Dictionary with 'xp' and 'gold'
     """
     # TODO: Implement reward calculation
-    pass
+    return {"xp": enemy["xp_reward"], "gold": enemy["gold_reward"]}
 
 def display_combat_stats(character, enemy):
     """
@@ -238,7 +389,6 @@ def display_combat_stats(character, enemy):
     # TODO: Implement status display
     print(f"\n{character['name']}: HP={character['health']}/{character['max_health']}")
     print(f"{enemy['name']}: HP={enemy['health']}/{enemy['max_health']}")
-    pass
 
 def display_battle_log(message):
     """
@@ -246,7 +396,6 @@ def display_battle_log(message):
     """
     # TODO: Implement battle log display
     print(f">>> {message}")
-    pass
 
 # ============================================================================
 # TESTING
@@ -255,13 +404,21 @@ def display_battle_log(message):
 if __name__ == "__main__":
     print("=== COMBAT SYSTEM TEST ===")
     
-    # Test enemy creation
-    # try:
-    #     goblin = create_enemy("goblin")
-    #     print(f"Created {goblin['name']}")
-    # except InvalidTargetError as e:
-    #     print(f"Invalid enemy: {e}")
+    try:
+        goblin = create_enemy("goblin")
+        print(f"Created {goblin['name']}")
+    except InvalidTargetError as e:
+        print(f"Invalid enemy: {e}")
     
+
+    test_char = {
+        'name': 'Hero',
+        'class': 'Warrior',
+        'health': 120,
+        'max_health': 120,
+        'strength': 15,
+        'magic': 5
+    }
     # Test battle
     # test_char = {
     #     'name': 'Hero',
@@ -272,10 +429,15 @@ if __name__ == "__main__":
     #     'magic': 5
     # }
     #
-    # battle = SimpleBattle(test_char, goblin)
+    battle = SimpleBattle(test_char, goblin)
+    try:
+        result = battle.start_battle()
+        print(f"Battle result: {result}")
+    except CharacterDeadError:
+        print("Character is dead!")
+
     # try:
     #     result = battle.start_battle()
     #     print(f"Battle result: {result}")
     # except CharacterDeadError:
     #     print("Character is dead!")
-
