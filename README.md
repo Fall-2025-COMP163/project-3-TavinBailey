@@ -149,3 +149,60 @@ Test files are provided for your learning but are protected. Modifying test file
 - Academic integrity investigation
 
 You can view tests to understand requirements, but any modifications will be automatically detected.
+
+## Module-by-Module Description
+
+| Module | Key Functions | Purpose |
+|--------|---------------|---------|
+| `main.py` | `start_game()`, `load_character()`, `save_character()` | Game launcher; handles player input, starts gameplay loop |
+| `character_manager.py` | `create_character()`, `load_character()`, `save_character()`, `gain_experience()`, `level_up()` | Manages character creation, leveling, and persistence |
+| `inventory_system.py` | `add_item()`, `remove_item()`, `use_item()`, `equip_item()` | Manages items, equipment, and inventory effects |
+| `quest_handler.py` | `accept_quest()`, `complete_quest()`, `abandon_quest()`, `get_active_quests()`, `get_completed_quests()`, `get_available_quests()` | Handles quest acceptance, completion, prerequisites, and rewards |
+| `combat_system.py` | `attack_enemy()`, `use_ability()`, `enemy_turn()`, `calculate_damage()` | Implements battle mechanics, turn-based combat, abilities, and damage calculations |
+| `game_data.py` | `load_quests()`, `load_items()`, `validate_data()` | Loads quests and items from external files; validates data integrity |
+| `custom_exceptions.py` | `InvalidCharacterClassError`, `QuestNotFoundError`, `InsufficientLevelError`, etc. | Defines all custom exceptions for robust error handling |
+| `data/quests.txt` | — | Stores quest definitions, including rewards, prerequisites, and levels |
+| `data/items.txt` | — | Stores item information, including effects and stats |
+| `data/save_games/` | — | Stores player save files automatically |
+
+## Exception Strategy
+
+Custom exceptions enforce game rules:
+
+| Exception | Purpose |
+|-----------|---------|
+| `InvalidCharacterClassError` | Raised when the player selects a non-existent character class |
+| `CharacterNotFoundError` | Raised when trying to load a non-existent character |
+| `SaveFileCorruptedError` | Raised when a save file is invalid or corrupted |
+| `QuestNotFoundError` | Raised when a quest ID does not exist in data |
+| `QuestRequirementsNotMetError` | Raised when prerequisites or requirements for a quest are unmet |
+| `QuestAlreadyCompletedError` | Raised when attempting to accept a completed quest |
+| `QuestNotActiveError` | Raised when attempting to complete or abandon a non-active quest |
+| `InsufficientLevelError` | Raised when character level is too low for a quest |
+
+## Design Choices
+
+- **Character Classes:** Warrior, Mage, Rogue, Cleric  
+- **Enemy Types:** Goblin, Orc, Dragon (custom enemies can be added)  
+- **Quest System:** Tracks active, completed, and available quests with rewards and prerequisites  
+- **Inventory System:** Supports item acquisition, usage, and stat effects  
+- **Combat System:** Turn-based with attack, abilities, and enemy interaction  
+- **Data-Driven:** All quests and items loaded from external `.txt` files for flexibility  
+- **Exception Handling:** Ensures game rules are enforced and prevents invalid actions
+
+## AI Usage
+
+AI assistance was used for:
+
+- Code review and bug checking across modules
+- Adding detailed inline comments and docstrings
+- Explaining error handling strategies
+- Verifying logic for quest management and tracking
+
+## How to Play
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/Fall-2025-COMP163/project-3-TavinBailey.git
+cd quest_chronicles
